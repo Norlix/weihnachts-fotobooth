@@ -284,7 +284,7 @@ function buildIntro() {
     const content = element('div', 'ci-content');
 
     const logo = element('img', 'ci-logo');
-    logo.src = new URL('ibm-logo.svg', ASSET_URL).href;
+    logo.src = new URL('ibm-logo-white.png', ASSET_URL).href;
     logo.alt = 'IBM';
 
     const title = element('h1', 'ci-title');
@@ -339,7 +339,13 @@ function buildIntro() {
     });
 
     content.append(logo, title, legend, options);
-    root.append(sky, garland, trees, content);
+    const credit = element('p', 'ci-credit');
+    credit.append('Created by Julian Erath, based on ');
+    const origin = element('a', 'ci-credit__link', 'Photobooth');
+    origin.href = 'https://github.com/PhotoboothProject/photobooth';
+    origin.tabIndex = -1;
+    credit.append(origin);
+    root.append(sky, garland, trees, content, credit);
 
     let handler = () => {};
     buttons.forEach((button) => button.addEventListener('click', () => handler(button.dataset.choice)));
