@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Dein Foto</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #fff; background: linear-gradient(180deg, #001141, #002d9c 60%, #0f62fe); display: flex; flex-direction: column; align-items: center; padding: 1.2rem 1rem 2rem; }
+  h1 { font-weight: 300; font-size: 1.25rem; margin: 0.4rem 0 1rem; text-align: center; }
+  h1 strong { font-weight: 700; } h1 .gold { color: #f1c21b; font-weight: 700; }
+  img { width: 100%; max-width: 640px; height: auto; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,20,.55); background: #0b1c5a; }
+  button, a.button { display: block; width: 100%; max-width: 640px; margin-top: 1.1rem; padding: 1rem; border: 0; border-radius: 12px; background: #da1e28; color: #fff; font-size: 1.15rem; font-weight: 600; text-align: center; text-decoration: none; }
+  a.button { background: rgba(255,255,255,.16); font-weight: 400; font-size: 1rem; padding: .8rem; }
+  p { max-width: 640px; text-align: center; font-size: .95rem; line-height: 1.4; opacity: .9; margin: .9rem 0 0; }
+  small { opacity: .65; margin-top: 1.4rem; text-align: center; }
+</style>
+</head>
+<body>
+<h1><strong>IBM</strong> Muccenter <span class="gold">Christmas</span> Fotobooth</h1>
+<img id="photo" src="%%IMAGE_URL%%" alt="Dein Foto">
+<button id="save" type="button">In Fotos sichern</button>
+<p id="hint">Im Menü „Bild sichern“ wählen. Klappt das nicht, das Foto lange gedrückt halten und „Zu Fotos hinzufügen“ wählen.</p>
+<a class="button" id="open" href="%%IMAGE_URL%%">Foto in voller Größe öffnen</a>
+<small>Der Link ist %%DAYS%% Tage gültig. Danach wird das Foto gelöscht.<br>Photo is available for %%DAYS%% days.</small>
+<script>
+  // The photo is fetched in advance, because the share sheet has to open right after the tap.
+  const imageUrl = "%%IMAGE_URL_JS%%";
+  const prepared = fetch(imageUrl).then((response) => response.blob()).then((blob) => new File([blob], "ibm-christmas-fotobooth.jpg", { type: "image/jpeg" })).catch(() => null);
+  const hint = document.getElementById("hint");
+  document.getElementById("save").addEventListener("click", async () => {
+    const file = await prepared;
+    try {
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "IBM Muccenter Christmas Fotobooth" });
+        return;
+      }
+    } catch (error) {
+      if (error && error.name === "AbortError") { return; }
+    }
+    hint.textContent = "Das Foto lange gedrückt halten und „Zu Fotos hinzufügen“ (iPhone) oder „Bild speichern“ (Android) wählen.";
+    document.getElementById("photo").scrollIntoView({ behavior: "smooth" });
+  });
+</script>
+</body>
+</html>

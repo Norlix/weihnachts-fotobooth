@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IBM Muccenter Christmas Fotobooth Diashow</title>
+    <link rel="stylesheet" href="slideshow.css">
+</head>
+<body>
+<main id="stage">
+    <div class="layer" id="layerA"></div>
+    <div class="layer" id="layerB"></div>
+    <section id="wall" aria-hidden="true"><div class="grid"></div></section>
+    <div id="empty"><div><strong>IBM</strong> Muccenter <span class="gold">Christmas</span> Fotobooth<small id="emptyHint">Die Diashow startet, sobald das erste Bild freigegeben wird.</small></div></div>
+    <canvas id="snow"></canvas>
+    <img id="garland" src="../ui/assets/garland.svg" alt="">
+    <footer id="ribbon"><span><strong>IBM</strong> Muccenter <span class="gold">Christmas</span> Fotobooth</span><span id="count"></span></footer>
+    <div id="progress"></div>
+    <div id="state"></div>
+</main>
+<script src="slideshow.js"></script>
+</body>
+</html>

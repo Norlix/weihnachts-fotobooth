@@ -36,8 +36,11 @@ if (!$config['protect']['admin'] || (!$config['protect']['localhost_admin'] && (
     echo getMenuBtn(PathUtility::getPublicPath('test'), 'testMenu', $config['icons']['admin']);
 }
 
-echo getMenuBtn(PathUtility::getPublicPath('gallery'), 'gallery', $config['icons']['gallery']);
-echo getMenuBtn(PathUtility::getPublicPath('slideshow'), 'slideshow', $config['icons']['slideshow']);
+$viewerAllowed = !($config['christmasui']['protect_viewer'] && $config['login']['enabled']) || (isset($_SESSION['auth']) && $_SESSION['auth'] === true);
+if ($viewerAllowed) {
+    echo getMenuBtn(PathUtility::getPublicPath('gallery'), 'gallery', $config['icons']['gallery']);
+    echo getMenuBtn(PathUtility::getPublicPath('slideshow'), 'slideshow', $config['icons']['slideshow']);
+}
 
 if (LoginMenuUtility::shouldShowChromaMenuEntry($config, $_SESSION, $_SERVER)) {
     echo getMenuBtn(PathUtility::getPublicPath('chroma'), 'chromaCapture', $config['icons']['chromaCapture']);

@@ -3,6 +3,7 @@
 require_once '../lib/boot.php';
 
 use Photobooth\Service\DatabaseManagerService;
+use Photobooth\Service\SlideshowShareService;
 
 $database = DatabaseManagerService::getInstance();
 
@@ -12,6 +13,9 @@ if (isset($_GET['status'])) {
     // Currently reports back the DB-Size to give the Client the ability
     // to detect changes
     $resp = ['dbsize' => $database->getDBSize()];
+    if (($_GET['source'] ?? '') === 'shared') {
+        $resp = ['dbsize' => SlideshowShareService::getInstance()->getStatusToken()];
+    }
     exit(json_encode($resp));
 } else {
     http_response_code(400);

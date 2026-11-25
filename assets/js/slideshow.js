@@ -1,5 +1,5 @@
 /* exported initPhotoSlideFromDOM */
-/* global photoboothTools standaloneReturnUrl */
+/* global photoboothTools standaloneReturnUrl slideshowSource */
 
 let ssTimeOut,
     ssRunning = false,
@@ -8,7 +8,10 @@ let ssTimeOut,
 const ssDelay = config.slideshow.pictureTime,
     ssButtonClass = '.pswp__button--playpause',
     interval = 1000 * config.slideshow.refreshTime,
-    ajaxurl = environment.publicFolders.api + '/gallery.php?status';
+    ajaxurl =
+        environment.publicFolders.api +
+        '/gallery.php?status' +
+        (typeof slideshowSource !== 'undefined' && slideshowSource === 'shared' ? '&source=shared' : '');
 
 function initPhotoSlideFromDOM(gallerySelector) {
     const hasStandaloneReturnUrl = typeof standaloneReturnUrl !== 'undefined' && Boolean(standaloneReturnUrl);

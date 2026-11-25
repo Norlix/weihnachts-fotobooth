@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hardwaretest Kamera, Monitor und Tastatur</title>
+    <style>
+        :root { --blue: #0f62fe; --dark: #001141; --red: #da1e28; --green: #198038; --gold: #f1c21b; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Helvetica Neue", Arial, sans-serif; background: var(--dark); color: #fff; }
+        main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+        h1 { font-weight: 300; margin: 0 0 0.25rem; }
+        h2 { font-size: 1.1rem; margin: 0 0 0.75rem; color: var(--gold); letter-spacing: 0.04em; text-transform: uppercase; }
+        p.lead { margin-top: 0; opacity: 0.8; }
+        section { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 0.75rem; padding: 1rem 1.25rem; margin: 1rem 0; }
+        button { font: inherit; padding: 0.5rem 1rem; border: 0; border-radius: 0.5rem; background: var(--blue); color: #fff; cursor: pointer; }
+        button.secondary { background: rgba(255, 255, 255, 0.18); }
+        button:disabled { opacity: 0.5; cursor: default; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { text-align: left; padding: 0.3rem 0.6rem 0.3rem 0; vertical-align: top; }
+        th { opacity: 0.7; font-weight: 400; width: 14rem; }
+        video { width: 100%; max-height: 60vh; background: #000; border-radius: 0.5rem; }
+        .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
+        .device { display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
+        .ok { color: #42be65; } .warn { color: var(--gold); } .bad { color: #ff8389; }
+        kbd { display: inline-block; min-width: 2rem; padding: 0.1rem 0.5rem; border: 1px solid #fff; border-bottom-width: 3px; border-radius: 0.35rem; background: rgba(255,255,255,0.14); text-align: center; }
+        #pattern { position: fixed; inset: 0; z-index: 10; display: none; background:
+            linear-gradient(90deg, rgba(255,255,255,0.25) 1px, transparent 1px) 0 0 / 10% 100%,
+            linear-gradient(0deg, rgba(255,255,255,0.25) 1px, transparent 1px) 0 0 / 100% 10%,
+            linear-gradient(90deg, #fff 0 14%, #ff0 0 28%, #0ff 0 42%, #0f0 0 57%, #f0f 0 71%, #f00 0 85%, #00f 0) 0 0 / 100% 16% no-repeat,
+            linear-gradient(90deg, #000, #fff) 0 100% / 100% 12% no-repeat, #202020; }
+        #pattern.open { display: block; }
+        #pattern .frame { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: min(100vw, 177.78vh); aspect-ratio: 16 / 9; border: 4px solid var(--red); display: grid; place-items: center; font-size: 2vw; text-shadow: 0 0 6px #000; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Hardwaretest</h1>
+    <p class="lead">Prüft Kameras (Raumkamera, Systemkamera, Webcam), den Monitor und die Tastatur im Browser. Nichts verlässt das Gerät.</p>
+
+    <section>
+        <h2>1 Kameras</h2>
+        <div class="row">
+            <button id="scan">Kameras suchen</button>
+            <span id="scanStatus"></span>
+        </div>
+        <div id="devices"></div>
+        <video id="preview" autoplay playsinline muted hidden></video>
+        <table id="info" hidden></table>
+        <div class="row" id="actions" hidden>
+            <button id="resolutions" class="secondary">Auflösungen prüfen</button>
+            <button id="snapshot" class="secondary">Testfoto speichern</button>
+            <button id="stop" class="secondary">Kamera stoppen</button>
+        </div>
+        <pre id="resolutionResult"></pre>
+    </section>
+
+    <section>
+        <h2>2 Monitor</h2>
+        <table id="screen"></table>
+        <div class="row"><button id="patternButton" class="secondary">Vollbild-Testbild öffnen</button></div>
+        <p>Das Testbild zeigt Farbbalken, einen Raster und einen roten Rahmen im Format 16 zu 9. Zum Schließen Esc oder Klick. Der Rahmen sollte den ganzen Bildschirm füllen, sonst hat der Monitor ein anderes Seitenverhältnis.</p>
+    </section>
+
+    <section>
+        <h2>3 Tastatur und Fernbedienung</h2>
+        <p>Drücke die Tasten, die in der Fotobooth gebraucht werden. Angezeigt wird, was der Browser empfängt.</p>
+        <p>Zuletzt gedrückt <strong id="lastKey">noch nichts</strong></p>
+        <p>Benötigt <kbd>←</kbd> <kbd>→</kbd> <kbd>Leertaste</kbd> <kbd>Enter</kbd> <kbd>Esc</kbd> <span id="keyChecks"></span></p>
+    </section>
+</main>
+<div id="pattern"><div class="frame" id="patternLabel"></div></div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+    const preview = $('preview');
+    let stream = null;
+    let currentDevice = null;
+
+    const row = (label, value, cls = '') => `<tr><th>${label}</th><td class="${cls}">${value}</td></tr>`;
+
+    async function scan() {
+        $('scanStatus').textContent = 'Suche ...';
+        if (!navigator.mediaDevices?.getUserMedia) {
+            $('scanStatus').innerHTML = '<span class="bad">Kein Kamerazugriff. Die Seite muss über http://localhost oder https geöffnet werden.</span>';
+            return;
+        }
+        try {
+            // Without a granted permission the browser hides the device names.
+            const probe = await navigator.mediaDevices.getUserMedia({ video: true });
+            probe.getTracks().forEach((track) => track.stop());
+        } catch (error) {
+            $('scanStatus').innerHTML = `<span class="bad">${error.name}: ${error.message}</span> Kamerazugriff im Browser erlauben und prüfen, ob eine andere App (zum Beispiel Teams) die Kamera belegt.`;
+            return;
+        }
+        const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === 'videoinput');
+        $('scanStatus').innerHTML = `<span class="${devices.length ? 'ok' : 'bad'}">${devices.length} Kamera(s) gefunden</span>`;
+        $('devices').innerHTML = '';
+        devices.forEach((device, index) => {
+            const line = document.createElement('div');
+            line.className = 'device';
+            line.innerHTML = `<span><strong>${index + 1}</strong> ${device.label || '(ohne Name)'}<br><small>${device.deviceId.slice(0, 12)}</small></span>`;
+            const button = document.createElement('button');
+            button.textContent = 'Testen';
+            button.addEventListener('click', () => start(device));
+            line.append(button);
+            $('devices').append(line);
+        });
+    }
+
+    async function start(device, constraints = {}) {
+        stop();
+        currentDevice = device;
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: device.deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 }, ...constraints }
+        });
+        preview.srcObject = stream;
+        preview.hidden = false;
+        $('info').hidden = false;
+        $('actions').hidden = false;
+        await preview.play().catch(() => {});
+        showInfo(device);
+    }
+
+    async function showInfo(device) {
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        const capabilities = track.getCapabilities?.() ?? {};
+        const ratio = settings.width && settings.height ? (settings.width / settings.height).toFixed(3) : '?';
+        const widescreen = Math.abs(settings.width / settings.height - 16 / 9) < 0.02;
+        $('info').innerHTML =
+            row('Name', device.label) +
+            row('Auflösung', `${settings.width} x ${settings.height}`, settings.width >= 1920 ? 'ok' : settings.width >= 1280 ? 'warn' : 'bad') +
+            row('Seitenverhältnis', `${ratio} ${widescreen ? '(16 zu 9)' : '(nicht 16 zu 9, Fotorahmen und Vorschau werden angepasst)'}`, widescreen ? 'ok' : 'warn') +
+            row('Bildrate laut Kamera', settings.frameRate ? `${Math.round(settings.frameRate)} Bilder pro Sekunde` : '?') +
+            row('Höchste Auflösung laut Kamera', capabilities.width && capabilities.height ? `${capabilities.width.max} x ${capabilities.height.max}` : '?') +
+            row('Gemessene Bildrate', '<span id="fps">wird gemessen ...</span>') +
+            row('Bildausschnitt, Zoom oder Auto-Framing', capabilities.zoom ? 'Zoom einstellbar. Automatische Ausschnitte der Raumkamera abschalten, falls das Bild springt.' : 'nicht einstellbar im Browser');
+        measureFps();
+    }
+
+    function measureFps() {
+        if (!preview.requestVideoFrameCallback) {
+            $('fps').textContent = 'vom Browser nicht messbar';
+            return;
+        }
+        let frames = 0;
+        const startedAt = performance.now();
+        const count = () => {
+            frames += 1;
+            if (performance.now() - startedAt < 3000 && stream) {
+                preview.requestVideoFrameCallback(count);
+            } else if (stream) {
+                const fps = (frames * 1000) / (performance.now() - startedAt);
+                $('fps').innerHTML = `<span class="${fps >= 24 ? 'ok' : 'warn'}">${fps.toFixed(1)} Bilder pro Sekunde</span>`;
+            }
+        };
+        preview.requestVideoFrameCallback(count);
+    }
+
+    async function testResolutions() {
+        const device = currentDevice;
+        const result = [];
+        for (const [width, height] of [[640, 480], [1280, 720], [1920, 1080], [2560, 1440], [3840, 2160]]) {
+            try {
+                const test = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: device.deviceId }, width: { exact: width }, height: { exact: height } }
+                });
+                const settings = test.getVideoTracks()[0].getSettings();
+                result.push(`${width} x ${height} ok (${Math.round(settings.frameRate ?? 0)} Bilder pro Sekunde)`);
+                test.getTracks().forEach((track) => track.stop());
+            } catch {
+                result.push(`${width} x ${height} nicht verfügbar`);
+            }
+        }
+        $('resolutionResult').textContent = result.join('\n');
+        await start(device);
+    }
+
+    function snapshot() {
+        const canvas = document.createElement('canvas');
+        canvas.width = preview.videoWidth;
+        canvas.height = preview.videoHeight;
+        canvas.getContext('2d').drawImage(preview, 0, 0);
+        canvas.toBlob((blob) => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `kameratest-${canvas.width}x${canvas.height}.jpg`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }, 'image/jpeg', 0.92);
+    }
+
+    function stop() {
+        stream?.getTracks().forEach((track) => track.stop());
+        stream = null;
+        preview.srcObject = null;
+    }
+
+    function showScreen() {
+        const ratio = (screen.width / screen.height).toFixed(3);
+        const widescreen = Math.abs(screen.width / screen.height - 16 / 9) < 0.02;
+        $('screen').innerHTML =
+            row('Bildschirmauflösung', `${screen.width} x ${screen.height}`, screen.width >= 1920 ? 'ok' : 'warn') +
+            row('Seitenverhältnis', `${ratio} ${widescreen ? '(16 zu 9)' : '(nicht 16 zu 9)'}`, widescreen ? 'ok' : 'warn') +
+            row('Fenstergröße', `${innerWidth} x ${innerHeight}`) +
+            row('Skalierung (Pixeldichte)', String(devicePixelRatio), devicePixelRatio === 1 ? 'ok' : 'warn') +
+            row('Farbtiefe', `${screen.colorDepth} Bit`);
+    }
+
+    const keys = { ArrowLeft: false, ArrowRight: false, ' ': false, Enter: false, Escape: false };
+    const labels = { ArrowLeft: '←', ArrowRight: '→', ' ': 'Leertaste', Enter: 'Enter', Escape: 'Esc' };
+    function renderKeys() {
+        $('keyChecks').innerHTML = Object.keys(keys).map((key) => `<span class="${keys[key] ? 'ok' : 'warn'}">${labels[key]} ${keys[key] ? 'angekommen' : 'offen'}</span>`).join(' · ');
+    }
+
+    $('scan').addEventListener('click', scan);
+    $('resolutions').addEventListener('click', testResolutions);
+    $('snapshot').addEventListener('click', snapshot);
+    $('stop').addEventListener('click', stop);
+    $('patternButton').addEventListener('click', async () => {
+        $('patternLabel').textContent = `${screen.width} x ${screen.height}  Esc zum Schließen`;
+        $('pattern').classList.add('open');
+        await document.documentElement.requestFullscreen?.().catch(() => {});
+    });
+    $('pattern').addEventListener('click', () => { $('pattern').classList.remove('open'); document.exitFullscreen?.().catch(() => {}); });
+    document.addEventListener('keydown', (event) => {
+        $('lastKey').textContent = `key "${event.key === ' ' ? 'Leertaste' : event.key}", code ${event.code}`;
+        if (event.key in keys) {
+            keys[event.key] = true;
+            renderKeys();
+            if (event.key === ' ' || event.key.startsWith('Arrow')) {
+                event.preventDefault();
+            }
+        }
+        if (event.key === 'Escape') {
+            $('pattern').classList.remove('open');
+        }
+    });
+    addEventListener('resize', showScreen);
+    showScreen();
+    renderKeys();
+</script>
+</body>
+</html>

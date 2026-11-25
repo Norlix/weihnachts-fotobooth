@@ -97,3 +97,43 @@
     justify-content: center;
   }
 }
+
+.dialog--share {
+  max-width: min(44rem, calc(100dvw - var(--dialog-spacing) * 2));
+}
+
+.dialog-message--share {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dialog-title {
+  font-size: clamp(1.6rem, 4vh, 2.4rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.dialog-hint {
+  font-size: 0.95rem;
+  opacity: 0.75;
+  text-align: center;
+}
+
+.dialog-countdown {
+  text-align: center;
+  padding: 0 var(--dialog-padding) 0.5rem;
+}
+
+.dialog-progress {
+  height: 0.5rem;
+  margin: 0 var(--dialog-padding) var(--dialog-padding);
+  background: color-mix(in srgb, var(--dialog-color), transparent 85%);
+
+  &--bar {
+    height: 100%;
+    background: var(--dialog-button-background);
+  }
+}

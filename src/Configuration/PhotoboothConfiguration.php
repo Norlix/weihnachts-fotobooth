@@ -7,6 +7,9 @@ use Photobooth\Configuration\Section\BackgroundConfiguration;
 use Photobooth\Configuration\Section\ButtonConfiguration;
 use Photobooth\Configuration\Section\ChromaCaptureConfiguration;
 use Photobooth\Configuration\Section\CollageConfiguration;
+use Photobooth\Configuration\Section\ChristmasArConfiguration;
+use Photobooth\Configuration\Section\CloudConfiguration;
+use Photobooth\Configuration\Section\ChristmasUiConfiguration;
 use Photobooth\Configuration\Section\ColorsConfiguration;
 use Photobooth\Configuration\Section\CommandsConfiguration;
 use Photobooth\Configuration\Section\CustomConfiguration;
@@ -36,6 +39,7 @@ use Photobooth\Configuration\Section\QualityConfiguration;
 use Photobooth\Configuration\Section\ReloadConfiguration;
 use Photobooth\Configuration\Section\RembgConfiguration;
 use Photobooth\Configuration\Section\RemoteBuzzerConfiguration;
+use Photobooth\Configuration\Section\ShareConfiguration;
 use Photobooth\Configuration\Section\SlideshowConfiguration;
 use Photobooth\Configuration\Section\SoundConfiguration;
 use Photobooth\Configuration\Section\StartScreenConfiguration;
@@ -97,6 +101,10 @@ class PhotoboothConfiguration implements ConfigurationInterface
                 ->append(KeyingConfiguration::getNode())
                 ->append(SyncToDriveConfiguration::getNode())
                 ->append(RemoteBuzzerConfiguration::getNode())
+                ->append(ChristmasArConfiguration::getNode())
+                ->append(CloudConfiguration::getNode())
+                ->append(ChristmasUiConfiguration::getNode())
+                ->append(ShareConfiguration::getNode())
                 ->append(SlideshowConfiguration::getNode())
                 ->append(TextOnPrintConfiguration::getNode())
                 ->append(QrConfiguration::getNode())

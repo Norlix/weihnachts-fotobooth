@@ -43,6 +43,17 @@ final class CollageConfiguration
                         })
                         ->end()
                     ->end()
+                ->integerNode('first_cntdwn_time')
+                    ->defaultValue(0)
+                    ->min(0)
+                    ->max(10)
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(function (string $value): int {
+                            return intval($value);
+                        })
+                        ->end()
+                    ->end()
                 ->booleanNode('continuous')->defaultValue(true)->end()
                 ->integerNode('continuous_time')
                     ->defaultValue(5)

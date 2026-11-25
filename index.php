@@ -100,6 +100,13 @@ if ($config['ui']['selfie_mode']) {
 <script src="<?=$assetService->getUrl('resources/js/virtualKeyboard.js')?>"></script>
     <script src="<?=$assetService->getUrl('resources/js/screensaver.js')?>"></script>
     <script src="<?=$assetService->getUrl('resources/js/core.js')?>"></script>
+<?php if ($config['christmasui']['enabled']): ?>
+    <link rel="stylesheet" href="<?=$assetService->getUrl('christmas/ui/christmas-ui.css')?>">
+    <script type="module" src="<?=$assetService->getUrl('christmas/ui/christmas-ui.js')?>"></script>
+<?php endif; ?>
+<?php if ($config['christmasar']['enabled']): ?>
+    <script type="module" src="<?=$assetService->getUrl('christmas/ar/christmas-ar.js')?>"></script>
+<?php endif; ?>
 
 <?php include PathUtility::getAbsolutePath('template/components/start.adminshortcut.php'); ?>
 <?php ProcessService::getInstance()->boot(); ?>

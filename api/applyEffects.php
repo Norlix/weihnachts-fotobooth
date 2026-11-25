@@ -12,6 +12,7 @@ use Photobooth\Enum\ImageFilterEnum;
 use Photobooth\Processor\ImageProcessor;
 use Photobooth\Service\DatabaseManagerService;
 use Photobooth\Service\LoggerService;
+use Photobooth\Service\CloudStorageService;
 use Photobooth\Service\RemoteStorageService;
 use Photobooth\Utility\ImageUtility;
 use Photobooth\Utility\PathUtility;
@@ -343,6 +344,11 @@ try {
             if ($config['ftp']['create_webpage']) {
                 $remoteStorage->createWebpage();
             }
+        }
+
+        // Upload to cloud storage in the background, the QR code follows once the upload is done
+        if (!$vars['isChroma']) {
+            CloudStorageService::getInstance()->enqueuePhoto($vars['singleImageFile']);
         }
 
         // Change permissions

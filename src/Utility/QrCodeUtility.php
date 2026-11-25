@@ -19,8 +19,10 @@ class QrCodeUtility
             writerOptions: [],
             validateResult: false,
             data: $text,
-            encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel: ErrorCorrectionLevel::Medium,
+            // Plain ASCII needs no extra encoding marker, which some scanners handle badly in long codes.
+            encoding: new Encoding(mb_check_encoding($text, 'ASCII') ? 'ISO-8859-1' : 'UTF-8'),
+            // Long addresses, such as signed download links, need the lowest error correction to stay scannable.
+            errorCorrectionLevel: strlen($text) > 200 ? ErrorCorrectionLevel::Low : ErrorCorrectionLevel::Medium,
             size: $size - (2 * $margin),
             margin: $margin,
             roundBlockSizeMode: RoundBlockSizeMode::Margin,

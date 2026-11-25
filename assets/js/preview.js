@@ -99,11 +99,14 @@ const photoboothPreview = (function () {
             }
         }
 
+        // Without an aspect ratio a camera with portrait modes, such as a phone used as webcam, can win the match for a
+        // large requested size with a portrait format. The ideal ratio keeps the stream in the landscape format.
         const webcamConstraints = {
             audio: false,
             video: {
                 width: videoWidth,
                 height: videoHeight,
+                aspectRatio: { ideal: videoWidth / videoHeight },
                 facingMode: config.preview.camera_mode
             }
         };

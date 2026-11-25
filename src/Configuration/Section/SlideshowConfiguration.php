@@ -12,6 +12,7 @@ final class SlideshowConfiguration
         return (new TreeBuilder('slideshow'))->getRootNode()->addDefaultsIfNotSet()
             ->ignoreExtraKeys()
             ->children()
+                ->booleanNode('enabled')->defaultValue(false)->end()
                 ->integerNode('refreshTime')
                     ->defaultValue(60)
                     ->beforeNormalization()

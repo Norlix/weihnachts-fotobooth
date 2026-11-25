@@ -1,0 +1,66 @@
+#preview--ar {
+  display: none;
+  position: absolute;
+  max-width: 100%;
+  max-height: 100%;
+  background: none;
+  pointer-events: none;
+  rotate: var(--preview-rotation);
+}
+
+#preview--ar.fill { object-fit: fill; }
+#preview--ar.contain { object-fit: contain; }
+#preview--ar.cover { object-fit: cover; }
+#preview--ar.none { object-fit: none; }
+#preview--ar.scale-down { object-fit: scale-down; }
+#preview--ar.flip-horizontal { scale: -1 1; }
+#preview--ar.flip-vertical { scale: 1 -1; }
+
+#christmas-ar-bar {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 60;
+  display: none;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.5rem;
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+
+#christmas-ar-bar.christmas-ar-bar--visible {
+  display: flex;
+}
+
+#christmas-ar-bar button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 3px solid transparent;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.85);
+  color: #222;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+#christmas-ar-bar button .christmas-ar-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+#christmas-ar-bar button[aria-pressed="true"] {
+  border-color: #d8232a;
+  background: #ffffff;
+  font-weight: 700;
+}

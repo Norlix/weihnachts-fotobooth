@@ -1,0 +1,72 @@
+<?php
+
+// Vorlage für config/my.config.inc.php. Die Datei in config/ ist per .gitignore ausgeschlossen und enthält die
+// Einstellungen des jeweiligen Rechners. Hier stehen die Werte für den Weihnachts-Fotobooth-Betrieb.
+return [
+    'ui' => ['language' => 'de'],
+    'christmasui' => ['enabled' => true, 'idle_minutes' => 5, 'protect_viewer' => true],
+    'christmasar' => ['enabled' => true],
+    // Galerie und Diashow sind nur über den passwortgeschützten Zugang unter /login erreichbar
+    'gallery' => ['enabled' => false],
+    'slideshow' => ['enabled' => false],
+    'filters' => ['enabled' => false],
+    'slideshowshare' => ['enabled' => true, 'timeout' => 30],
+    // Der Standardtext "Photobooth we love OpenSource" auf der Collage entfällt
+    'textoncollage' => ['enabled' => false],
+    'collage' => ['first_cntdwn_time' => 5, 'cntdwn_time' => 3],
+    // Zugang für Galerie und Diashow. Das Passwort wird im Admin-Bereich gesetzt und dort als Hash gespeichert.
+    'login' => ['enabled' => true, 'username' => 'Photo', 'password' => null],
+    'preview' => [
+        'mode' => 'device_cam',
+        'camTakesPic' => true,
+        'asBackground' => true,
+        'style' => 'contain',
+        // Höchste Auflösung, die die Kamera liefert. Der Browser wählt das nächstliegende unterstützte Format.
+        'videoWidth' => 3840,
+        'videoHeight' => 2160,
+    ],
+    'picture' => [
+        'naming' => 'random',
+        'cntdwn_time' => 5,
+        'time_to_live' => 60,
+        'frame' => 'christmas/ui/assets/frame-christmas.png',
+        'extend_by_frame' => true,
+        'frame_left_percentage' => 6,
+        'frame_right_percentage' => 6,
+        'frame_top_percentage' => 7,
+        'frame_bottom_percentage' => 14,
+    ],
+    // Qualität 90 statt 100 halbiert die Dateigröße bei 4K kaum sichtbar
+    'jpeg_quality' => ['image' => 90],
+    // Cloud-Speicher für QR-Download und Diashow. Zugangsschlüssel stehen nicht hier, sondern in der Datei .env
+    'cloud' => [
+        'enabled' => false,
+        'provider_name' => 'Backblaze B2, Rechenzentrum Amsterdam',
+        'endpoint' => 'https://s3.eu-central-003.backblazeb2.com',
+        'region' => 'eu-central-003',
+        'bucket' => 'BUCKET-FUER-FOTOS',
+        // Zweiter Bucket für Diashow-Bilder und Manifest. Leer lassen, um denselben Bucket zu nutzen.
+        'slideshow_bucket' => 'BUCKET-FUER-DIASHOW',
+        // Leer lassen bei einem privaten Bucket. Dann sind alle Links signiert und laufen nach höchstens 7 Tagen ab.
+        'public_base_url' => '',
+        'retention_days' => 7,
+    ],
+    'qr' => ['custom_text' => true, 'text' => 'QR-Code scannen und das Foto auf dem Handy speichern.'],
+    'background' => ['defaults' => 'christmas/ui/assets/background.svg'],
+    // IBM Carbon Farben mit weihnachtlichen Akzenten
+    'colors' => [
+        'background_countdown' => '#001141',
+        'cheese' => '#da1e28',
+        'primary' => '#0f62fe',
+        'primary_light' => '#edf5ff',
+        'secondary' => '#0043ce',
+        'highlight' => '#f1c21b',
+        'font' => '#ffffff',
+        'font_secondary' => '#161616',
+        'panel' => '#002d9c',
+        'border' => '#c6c6c6',
+        'box' => '#edf5ff',
+        'status_bar' => '#001141',
+        'gallery_button' => '#ffffff',
+    ],
+];

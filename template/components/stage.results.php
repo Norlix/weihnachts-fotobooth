@@ -27,7 +27,7 @@ if ($config['ui']['result_buttons']) {
     }
 
     if ($config['qr']['enabled']) {
-        echo ComponentUtility::renderButton('qr', $config['icons']['qr'], 'qrbtn');
+        echo ComponentUtility::renderButton('qrDownload', $config['icons']['qr'], 'qrbtn');
     }
     if ($config['gallery']['enabled']) {
         echo ComponentUtility::renderButton('gallery', $config['icons']['gallery'], 'gallerybtn');

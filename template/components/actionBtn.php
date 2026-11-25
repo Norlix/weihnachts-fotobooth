@@ -3,6 +3,7 @@
 use Photobooth\Service\LanguageService;
 use Photobooth\Service\PrintManagerService;
 use Photobooth\Utility\ComponentUtility;
+use Photobooth\Utility\PathUtility;
 
 $languageService = LanguageService::getInstance();
 $printManager = PrintManagerService::getInstance();
@@ -29,6 +30,9 @@ if ($config['button']['reload']) {
 }
 if ($config['gallery']['enabled']) {
     echo ComponentUtility::renderButton('gallery', $config['icons']['gallery'], 'gallery-button');
+}
+if ($config['slideshow']['enabled']) {
+    echo ComponentUtility::renderButtonLink('slideshowButton', $config['icons']['slideshow'], PathUtility::getPublicPath('slideshow') . '?return=start' . ($config['slideshowshare']['enabled'] ? '&source=shared' : ''), true, ['class' => 'slideshow-button']);
 }
 if ($config['button']['show_cups']) {
     echo ComponentUtility::renderButton('cups', $config['icons']['cups'], 'cups-button');

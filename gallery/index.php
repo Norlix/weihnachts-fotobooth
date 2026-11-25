@@ -9,6 +9,11 @@ use Photobooth\Utility\LoginMenuUtility;
 use Photobooth\Utility\PathUtility;
 
 $assetService = AssetService::getInstance();
+
+if ($config['christmasui']['protect_viewer'] && $config['login']['enabled'] && !(isset($_SESSION['auth']) && $_SESSION['auth'] === true)) {
+    header('location: ' . PathUtility::getPublicPath('login'));
+    exit();
+}
 $pageTitle = 'Gallery - ' . ApplicationService::getInstance()->getTitle();
 $photoswipe = true;
 $randomImage = false;

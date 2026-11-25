@@ -119,6 +119,7 @@ const photoBooth = (function () {
     };
 
     api.reset = function () {
+        api.shareDialog.close();
         loader.css('--stage-background', 'var(--background-countdown-color)');
         loader.removeClass('stage--active');
         loaderButtonBar.empty();
@@ -209,7 +210,11 @@ const photoBooth = (function () {
             if (photoboothPreview.stream) {
                 videoSensor.get(0).width = previewVideo.get(0).videoWidth;
                 videoSensor.get(0).height = previewVideo.get(0).videoHeight;
-                videoSensor.get(0).getContext('2d').drawImage(previewVideo.get(0), 0, 0);
+                const sensorContext = videoSensor.get(0).getContext('2d');
+                sensorContext.drawImage(previewVideo.get(0), 0, 0);
+                if (window.christmasAr) {
+                    window.christmasAr.drawOverlay(sensorContext);
+                }
             }
         }
         if (!config.commands.preview_kill || config.preview.camTakesPic) {
@@ -535,7 +540,10 @@ const photoBooth = (function () {
             let countdownTime;
             switch (api.photoStyle) {
                 case PhotoStyle.COLLAGE:
-                    countdownTime = config.collage.cntdwn_time;
+                    countdownTime =
+                        api.nextCollageNumber === 0 && config.collage.first_cntdwn_time > 0
+                            ? config.collage.first_cntdwn_time
+                            : config.collage.cntdwn_time;
                     break;
                 case PhotoStyle.VIDEO:
                     countdownTime = config.video.cntdwn_time;
@@ -1265,6 +1273,33 @@ const photoBooth = (function () {
         buttonbar.insertBefore(submitButton, buttonbar.firstChild);
     };
 
+    // With cloud storage the QR code points to the uploaded photo, so it can only be drawn once the upload is done.
+    api.waitForCloudUpload = (filename) =>
+        new Promise((resolve, reject) => {
+            if (!config.cloud.enabled) {
+                resolve();
+                return;
+            }
+            const startedAt = Date.now();
+            const check = () => {
+                fetch(environment.publicFolders.api + '/cloudStatus.php?file=' + encodeURIComponent(filename), {
+                    cache: 'no-store'
+                })
+                    .then((response) => response.json())
+                    .then((status) => {
+                        if (status.uploaded) {
+                            resolve();
+                        } else if (status.failed || Date.now() - startedAt > 180000) {
+                            reject(new Error('Upload not available'));
+                        } else {
+                            setTimeout(check, 1500);
+                        }
+                    })
+                    .catch(() => setTimeout(check, 3000));
+            };
+            check();
+        });
+
     api.showQrCode = function (filename) {
         if (!config.qr.enabled) {
             return;
@@ -1274,7 +1309,13 @@ const photoBooth = (function () {
         const body = photoboothTools.modal.element.querySelector('.modal-body');
 
         const image = document.createElement('img');
-        image.src = environment.publicFolders.api + '/qrcode.php?filename=' + filename;
+        api.waitForCloudUpload(filename)
+            .then(() => {
+                image.src = environment.publicFolders.api + '/qrcode.php?filename=' + filename;
+            })
+            .catch(() => {
+                image.alt = photoboothTools.getTranslation('cloudPreparing');
+            });
         body.appendChild(image);
 
         const qrHelpText = config.qr.custom_text
@@ -1283,6 +1324,103 @@ const photoBooth = (function () {
         const text = document.createElement('p');
         text.innerHTML = qrHelpText;
         body.appendChild(text);
+    };
+
+    api.shareDialog = {
+        element: null,
+        timer: null,
+        close: () => {
+            clearInterval(api.shareDialog.timer);
+            api.shareDialog.timer = null;
+            if (api.shareDialog.element !== null) {
+                api.shareDialog.element.close();
+                api.shareDialog.element.remove();
+                api.shareDialog.element = null;
+            }
+        },
+        // Nothing is sent to the server unless the guest explicitly agrees. Timeout, "No", closing the dialog and
+        // reloading the page therefore all mean "do not show in the slideshow".
+        open: (filename) => {
+            api.shareDialog.close();
+
+            const timeoutMs = parseInt(config.slideshowshare.timeout, 10) * 1000;
+            const element = document.createElement('dialog');
+            element.classList.add('dialog', 'dialog--share', 'rotarygroup');
+
+            const message = document.createElement('div');
+            message.classList.add('dialog-message', 'dialog-message--share');
+            const question = document.createElement('div');
+            question.classList.add('dialog-title');
+            question.textContent = photoboothTools.getTranslation('shareQuestion');
+            const hint = document.createElement('div');
+            hint.classList.add('dialog-hint');
+            hint.textContent = config.cloud.enabled
+                ? photoboothTools
+                      .getTranslation('shareHintCloud')
+                      .replace('%provider%', config.cloud.provider_name)
+                      .replace('%days%', String(config.cloud.retention_days))
+                : photoboothTools.getTranslation('shareHint');
+            message.append(question, hint);
+            element.appendChild(message);
+
+            const countdown = document.createElement('div');
+            countdown.classList.add('dialog-countdown');
+            const countdownLabel = document.createElement('span');
+            countdownLabel.textContent = photoboothTools.getTranslation('shareSeconds') + ': ';
+            const countdownValue = document.createElement('strong');
+            countdown.append(countdownLabel, countdownValue);
+            const progress = document.createElement('div');
+            progress.classList.add('dialog-progress');
+            const progressBar = document.createElement('div');
+            progressBar.classList.add('dialog-progress--bar');
+            progress.appendChild(progressBar);
+            element.append(countdown, progress);
+
+            const buttonbar = document.createElement('div');
+            buttonbar.classList.add('dialog-buttonbar');
+            element.appendChild(buttonbar);
+
+            const yesButton = photoboothTools.button.create('shareYes', 'fa fa-check', 'default', 'dialog-');
+            const noButton = photoboothTools.button.create('shareNo', 'fa fa-times', 'default', 'dialog-');
+            buttonbar.append(yesButton, noButton);
+
+            noButton.addEventListener('click', () => api.shareDialog.close());
+            element.addEventListener('cancel', () => api.shareDialog.close());
+            yesButton.addEventListener('click', () => {
+                api.shareDialog.close();
+                photoboothTools
+                    .ajaxWithCsrf({
+                        method: 'POST',
+                        url: environment.publicFolders.api + '/shareToSlideshow.php',
+                        data: { file: filename }
+                    })
+                    .done(() => {
+                        photoboothTools.overlay.showSuccess(photoboothTools.getTranslation('shareDone'));
+                    })
+                    .fail(() => {
+                        photoboothTools.overlay.showError(photoboothTools.getTranslation('shareFailed'));
+                    })
+                    .always(() => {
+                        setTimeout(() => photoboothTools.overlay.close(), notificationTimeout);
+                    });
+            });
+
+            const startedAt = Date.now();
+            const update = () => {
+                const remainingMs = Math.max(0, timeoutMs - (Date.now() - startedAt));
+                countdownValue.textContent = String(Math.ceil(remainingMs / 1000));
+                progressBar.style.width = (remainingMs / timeoutMs) * 100 + '%';
+                if (remainingMs === 0) {
+                    api.shareDialog.close();
+                }
+            };
+            update();
+            api.shareDialog.timer = setInterval(update, 200);
+
+            document.body.append(element);
+            api.shareDialog.element = element;
+            element.showModal();
+        }
     };
 
     api.renderPic = function (filename, files) {
@@ -1365,6 +1503,10 @@ const photoBooth = (function () {
             resultPage.attr('data-img', filename);
             resultPage.addClass('stage--active');
 
+            if (config.slideshowshare.enabled && !photoboothTools.isVideoFile(filename)) {
+                api.shareDialog.open(filename);
+            }
+
             loader.removeClass('stage--active showBackgroundImage');
             loader.css('background-image', '');
 
@@ -1381,10 +1523,28 @@ const photoBooth = (function () {
                     resultPage.append(qrWrapper);
                 });
 
-                qrResultImage.src = environment.publicFolders.api + '/qrcode.php?filename=' + filename;
                 qrResultImage.alt = 'QR-Code';
                 qrResultImage.classList.add('stage-code__image');
                 qrWrapper.append(qrResultImage);
+                if (config.cloud.enabled) {
+                    qrResultImage.hidden = true;
+                    const preparing = document.createElement('p');
+                    preparing.classList.add('stage-code__caption');
+                    preparing.textContent = photoboothTools.getTranslation('cloudPreparing');
+                    qrWrapper.append(preparing);
+                    resultPage.append(qrWrapper);
+                    qrResultImage.addEventListener('load', () => {
+                        preparing.remove();
+                        qrResultImage.hidden = false;
+                    });
+                }
+                api.waitForCloudUpload(filename)
+                    .then(() => {
+                        qrResultImage.src = environment.publicFolders.api + '/qrcode.php?filename=' + filename;
+                    })
+                    .catch(() => {
+                        photoboothTools.console.log('QR code not available, the cloud upload did not finish.');
+                    });
 
                 const qrShortText = config.qr.short_text;
                 if (qrShortText && qrShortText.length > 0) {
