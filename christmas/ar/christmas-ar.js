@@ -13,6 +13,7 @@ const MODULE_URL = new URL(import.meta.url);
 const VENDOR_URL = new URL('../vendor/mediapipe/', MODULE_URL);
 const ASSET_URL = new URL('assets/', MODULE_URL);
 const STORAGE_KEY = 'christmasArFilter';
+const LOOK_KEY = 'christmasArLook';
 const DELEGATE_KEY = 'christmasArDelegate';
 const MAX_FACES = 6;
 const DETECTION_WIDTH = 960;
@@ -87,6 +88,11 @@ const LABELS = {
     }
 };
 
+const LOOK_LABELS = {
+    de: { none: 'Original', sepia: 'Sepia', retro: 'Retro', polaroid: 'Polaroid', title: 'Farbstil' },
+    en: { none: 'Original', sepia: 'Sepia', retro: 'Retro', polaroid: 'Polaroid', title: 'Colour look' }
+};
+
 const FILTERS = [
     { id: 'none', icon: '🚫', parts: [] },
     { id: 'santa', icon: '🎅', parts: ['hat'] },
@@ -101,6 +107,37 @@ const FILTERS = [
     { id: 'baubles', icon: '🎁', parts: ['baubles', 'snow'] },
     { id: 'confetti', icon: '🎊', parts: ['confetti', 'sparkles'] },
     { id: 'festive', icon: '🎄', parts: ['hat', 'snow', 'glow'] }
+];
+// Colour looks are chosen independently of the filters above and combine with every one of them. They change the
+// camera picture itself. The css filter is applied to the video in the preview and to the canvas that becomes the
+// photo. The wash, vignette and grain are drawn on the overlay canvas.
+const LOOKS = [
+    { id: 'none', icon: '🖼️', look: null },
+    {
+        id: 'sepia',
+        icon: '📜',
+        look: { css: 'sepia(0.95) contrast(1.06) brightness(1.03)', wash: 'rgba(120, 70, 20, 0.08)', vignette: 0.35, grain: 0.05 }
+    },
+    {
+        id: 'retro',
+        icon: '📻',
+        look: {
+            css: 'contrast(1.06) saturate(1.3) sepia(0.35) hue-rotate(-12deg) brightness(1.03)',
+            wash: 'rgba(255, 140, 60, 0.1)',
+            vignette: 0.55,
+            grain: 0.1
+        }
+    },
+    {
+        id: 'polaroid',
+        icon: '📸',
+        look: {
+            css: 'contrast(0.82) saturate(1.05) sepia(0.12) hue-rotate(8deg) brightness(1.1)',
+            wash: 'rgba(222, 236, 200, 0.17)',
+            vignette: 0.28,
+            grain: 0.06
+        }
+    }
 ];
 const FACE_PARTS = new Set([
     'hat',
@@ -157,6 +194,7 @@ function start() {
         detectionContext: detectionCanvas.getContext('2d', { willReadFrequently: true }),
         scanContext: null,
         filterId: readStoredFilter(),
+        lookId: readStored(LOOK_KEY, 'none'),
         scanCanvas: document.createElement('canvas'),
         landmarker: null,
         scanner: null,
@@ -174,6 +212,8 @@ function start() {
         confetti: createConfetti(),
         sparkles: createSparkles(),
         baubles: createBaubles(),
+        appliedLook: '',
+        grain: null,
         lastFrame: performance.now(),
         frames: 0,
         fps: 0,
@@ -222,6 +262,10 @@ function start() {
 
     function currentFilter() {
         return FILTERS.find((filter) => filter.id === state.filterId) ?? FILTERS[0];
+    }
+
+    function currentLook() {
+        return LOOKS.find((entry) => entry.id === state.lookId)?.look ?? null;
     }
 
     function detectFaces(width, height, now) {
@@ -309,11 +353,17 @@ function start() {
         requestAnimationFrame(render);
 
         const filter = currentFilter();
+        const look = currentLook();
+        const lookCss = look?.css ?? '';
+        if (state.appliedLook !== lookCss) {
+            state.appliedLook = lookCss;
+            video.style.filter = lookCss;
+        }
         const visible = video.offsetParent !== null && video.readyState >= 2 && video.videoWidth > 0;
-        canvas.style.display = visible && filter.id !== 'none' ? 'block' : 'none';
+        canvas.style.display = visible && (filter.id !== 'none' || look) ? 'block' : 'none';
         bar.update();
 
-        if (!visible || filter.id === 'none') {
+        if (!visible || (filter.id === 'none' && !look)) {
             state.tracks = [];
             state.faces = [];
             return;
@@ -402,6 +452,9 @@ function start() {
         if (has('sparkles')) {
             drawSparkles(context, state.sparkles, width, height, now);
         }
+        if (look) {
+            drawLook(context, look, state, width, height);
+        }
 
         state.frames += 1;
         if (now - state.fpsSince >= 1000) {
@@ -426,6 +479,18 @@ function start() {
             storeFilter(state.filterId);
         },
         getFilter: () => state.filterId,
+        // Css filter of the active colour look, empty when there is none. core.js applies it while copying the frame.
+        cssFilter: () => currentLook()?.css || 'none',
+        setLook(lookId) {
+            state.lookId = LOOKS.some((entry) => entry.id === lookId) ? lookId : 'none';
+            storeValue(LOOK_KEY, state.lookId);
+        },
+        getLook: () => state.lookId,
+        cycleLook(direction) {
+            const index = LOOKS.findIndex((entry) => entry.id === state.lookId);
+            state.lookId = LOOKS[(index + direction + LOOKS.length) % LOOKS.length].id;
+            storeValue(LOOK_KEY, state.lookId);
+        },
         filters: () => FILTERS.map((filter) => filter.id),
         // Steps through the filters, wrapping around at both ends. Used by the keyboard control of the start screen.
         cycle(direction) {
@@ -445,7 +510,8 @@ function start() {
             fps: state.fps,
             detectMs: Math.round(state.detectMs),
             delegate: state.delegate,
-            filter: state.filterId
+            filter: state.filterId,
+            look: state.lookId
         })
     };
 }
@@ -468,12 +534,16 @@ function readStoredFilter() {
     return readStored(STORAGE_KEY, 'none');
 }
 
-function storeFilter(filterId) {
+function storeValue(key, value) {
     try {
-        window.localStorage.setItem(STORAGE_KEY, filterId);
+        window.localStorage.setItem(key, value);
     } catch {
         // storage is optional
     }
+}
+
+function storeFilter(filterId) {
+    storeValue(STORAGE_KEY, filterId);
 }
 
 function createFilterBar(state) {
@@ -500,7 +570,32 @@ function createFilterBar(state) {
         return button;
     });
 
-    document.body.append(bar);
+    const lookBar = document.createElement('div');
+    lookBar.id = 'christmas-ar-looks';
+    lookBar.setAttribute('role', 'toolbar');
+    const lookTitle = document.createElement('span');
+    lookTitle.className = 'christmas-ar-looks-title';
+    lookTitle.textContent = LOOK_LABELS[language].title;
+    lookBar.append(lookTitle);
+    const lookButtons = LOOKS.map((entry) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.look = entry.id;
+        const icon = document.createElement('span');
+        icon.className = 'christmas-ar-icon';
+        icon.textContent = entry.icon;
+        const label = document.createElement('span');
+        label.textContent = LOOK_LABELS[language][entry.id];
+        button.append(icon, label);
+        button.addEventListener('click', () => {
+            state.lookId = entry.id;
+            storeValue(LOOK_KEY, entry.id);
+        });
+        lookBar.append(button);
+        return button;
+    });
+
+    document.body.append(bar, lookBar);
     let shownFilter = null;
 
     return {
@@ -510,8 +605,12 @@ function createFilterBar(state) {
             const view = document.body.dataset.christmasView ?? 'camera';
             const visible = view === 'camera' && Boolean(startStage?.classList.contains('stage--active'));
             bar.classList.toggle('christmas-ar-bar--visible', visible);
+            lookBar.classList.toggle('christmas-ar-bar--visible', visible);
             for (const button of buttons) {
                 button.setAttribute('aria-pressed', String(button.dataset.filter === state.filterId));
+            }
+            for (const button of lookButtons) {
+                button.setAttribute('aria-pressed', String(button.dataset.look === state.lookId));
             }
             if (visible && shownFilter !== state.filterId) {
                 shownFilter = state.filterId;
@@ -819,6 +918,53 @@ function drawStarGlasses(context, face) {
         context.stroke();
         context.restore();
     }
+    context.restore();
+}
+
+function createGrainTile() {
+    const size = 256;
+    const tile = document.createElement('canvas');
+    tile.width = size;
+    tile.height = size;
+    const tileContext = tile.getContext('2d');
+    const data = tileContext.createImageData(size, size);
+    for (let index = 0; index < data.data.length; index += 4) {
+        const value = Math.random() * 255;
+        data.data[index] = value;
+        data.data[index + 1] = value;
+        data.data[index + 2] = value;
+        data.data[index + 3] = 255;
+    }
+    tileContext.putImageData(data, 0, 0);
+    return tile;
+}
+
+function drawLook(context, look, state, width, height) {
+    context.fillStyle = look.wash;
+    context.fillRect(0, 0, width, height);
+
+    const vignette = context.createRadialGradient(
+        width / 2,
+        height / 2,
+        Math.min(width, height) * 0.3,
+        width / 2,
+        height / 2,
+        Math.hypot(width, height) / 2
+    );
+    vignette.addColorStop(0, 'rgba(20, 8, 0, 0)');
+    vignette.addColorStop(1, `rgba(20, 8, 0, ${look.vignette})`);
+    context.fillStyle = vignette;
+    context.fillRect(0, 0, width, height);
+
+    // Film grain from a noise tile that is shifted randomly on every frame, so it flickers like real film.
+    state.grain ??= context.createPattern(createGrainTile(), 'repeat');
+    const scale = Math.max(1, height / 720);
+    context.save();
+    context.globalAlpha = look.grain;
+    context.translate(-Math.random() * 256 * scale, -Math.random() * 256 * scale);
+    context.scale(scale, scale);
+    context.fillStyle = state.grain;
+    context.fillRect(0, 0, (width + 256 * scale) / scale, (height + 256 * scale) / scale);
     context.restore();
 }
 

@@ -37,6 +37,57 @@
   display: flex;
 }
 
+#christmas-ar-looks {
+  position: fixed;
+  top: 6.9rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 60;
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+
+#christmas-ar-looks.christmas-ar-bar--visible {
+  display: flex;
+}
+
+.christmas-ar-looks-title {
+  padding-right: 0.4rem;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+#christmas-ar-looks button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border: 3px solid transparent;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.85);
+  color: #222;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+#christmas-ar-looks button .christmas-ar-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+#christmas-ar-looks button[aria-pressed="true"] {
+  border-color: #d8232a;
+  background: #ffffff;
+  font-weight: 700;
+}
+
 #christmas-ar-bar button {
   display: flex;
   flex-direction: column;

@@ -22,6 +22,7 @@ const TEXTS = {
     de: {
         legendTitle: "So funktioniert's",
         filter: 'Filter wechseln',
+        look: 'Farbstil wechseln',
         photo: 'Foto aufnehmen',
         collage: 'Collage aufnehmen',
         slideshow: 'Diashow',
@@ -36,6 +37,7 @@ const TEXTS = {
     en: {
         legendTitle: 'How it works',
         filter: 'Switch filter',
+        look: 'Change colour look',
         photo: 'Take a photo',
         collage: 'Take a collage',
         slideshow: 'Slideshow',
@@ -154,6 +156,12 @@ function start() {
                 return true;
             case 'ArrowRight':
                 window.christmasAr?.cycle(1);
+                return true;
+            case 'ArrowUp':
+                window.christmasAr?.cycleLook(-1);
+                return true;
+            case 'ArrowDown':
+                window.christmasAr?.cycleLook(1);
                 return true;
             case ' ':
             case 'Enter':
@@ -306,6 +314,7 @@ function buildIntro() {
         rows.append(row);
     };
     addRow(['←', '→'], text.filter);
+    addRow(['↑', '↓'], text.look);
     addRow([language === 'de' ? 'Leertaste' : 'Space', 'Enter'], text.photo);
     addRow(['Esc'], text.back);
     legend.append(rows);
@@ -396,8 +405,10 @@ function buildHud() {
 
     const filterHint = element('div', 'ci-hud__hint');
     filterHint.append(keycap('←'), keycap('→'), element('span', '', text.filter));
+    const lookHint = element('div', 'ci-hud__hint');
+    lookHint.append(keycap('↑'), keycap('↓'), element('span', '', text.look));
 
-    root.append(back, shoot, filterHint);
+    root.append(back, shoot, filterHint, lookHint);
 
     let modeResolver = () => 'photo';
     return {

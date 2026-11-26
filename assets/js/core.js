@@ -211,7 +211,9 @@ const photoBooth = (function () {
                 videoSensor.get(0).width = previewVideo.get(0).videoWidth;
                 videoSensor.get(0).height = previewVideo.get(0).videoHeight;
                 const sensorContext = videoSensor.get(0).getContext('2d');
+                sensorContext.filter = window.christmasAr ? window.christmasAr.cssFilter() : 'none';
                 sensorContext.drawImage(previewVideo.get(0), 0, 0);
+                sensorContext.filter = 'none';
                 if (window.christmasAr) {
                     window.christmasAr.drawOverlay(sensorContext);
                 }
